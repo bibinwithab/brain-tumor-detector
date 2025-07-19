@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+*.sqlite3
+.env
+venv/
+ENV/
+.env.*
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Model files
+backend/models/*.h5
+
+# Temp files
+backend/temp/
+
+# Data
+backend/Brain Tumor MRI/
+!backend/Brain Tumor MRI/README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test outputs
+*.out
+*.tmp
+
+# Others
+*.bak
