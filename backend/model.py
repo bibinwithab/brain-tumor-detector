@@ -3,8 +3,6 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropou
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-base_dir = ".\brain-tumor-detector\backend\Brain Tumor MRI"
-
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     rotation_range=15,
