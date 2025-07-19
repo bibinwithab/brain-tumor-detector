@@ -6,7 +6,6 @@ A deep learning project for automatic brain tumor classification using MRI image
 
 - Multi-class classification of brain tumors from MRI images
 - REST API for prediction using FastAPI
-- Randomized test script for model evaluation
 - Organized dataset structure for training and testing
 
 ## Project Structure
