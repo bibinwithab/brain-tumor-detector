@@ -19,7 +19,7 @@ backend/
   requirements.txt   # Python dependencies
   Brain Tumor MRI/   # Dataset (Training/Testing folders)
   models/            # Saved model files (.h5)
-frontend/            # (Optional) Frontend code
+frontend/            # Frontend code (Yet to update)
 ```
 
 ## Getting Started
