@@ -105,11 +105,17 @@ uvicorn app:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 Step 2: Test with Postman
-`Method`: `POST`\n
-`URL`: `http://localhost:5000/predict`
+```
+`Method`: `POST`  
+
+`URL`: `http://localhost:8000/predict`
+
 `Body`: `form-data`
+
 `KEY`: `file (Change the type from "Text" to "File")`
+
 `VALUE`: `Select your MRI image file`
+```
 The API will return a JSON response with the base64-encoded segmentation masks if a tumor is detected.
 
 ---
