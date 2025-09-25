@@ -10,6 +10,8 @@ The project evaluates two architectures:
 
 ---
 
+## Features
+
 The entire pipeline, from data preparation to model deployment via a REST API, is included.
 Features
 - Model Comparison: Trains and evaluates two U-Net architectures to empirically determine the most effective approach.
