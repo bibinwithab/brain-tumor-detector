@@ -86,11 +86,11 @@ This script is the core of the project. It trains both models, evaluates them, a
 python comparison.py
 ```
 
-After running, check the models/ folder for the saved .h5 files and the results/ folder for the performance analysis.
+After running, check the `models/` folder for the saved .h5 files and the `results/` folder for the performance analysis.
 2. Test a Single Image
 
 The test.py script allows you to quickly get a visual prediction for a single MRI scan using the pre-trained models.
-*Ensure the models exist in the ./models/ folder first*
+*Ensure the models exist in the `./models/` folder first*
 ```python
 python test.py --image path/to/your/mri_image.png
 ```
