@@ -105,7 +105,7 @@ uvicorn app:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 Step 2: Test with Postman
-`Method`: `POST`
+`Method`: `POST`\n
 `URL`: `http://localhost:5000/predict`
 `Body`: `form-data`
 `KEY`: `file (Change the type from "Text" to "File")`
