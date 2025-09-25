@@ -27,7 +27,7 @@ backend/temp/
 
 # Data
 backend/Brain Tumor MRI/
-!backend/Brain Tumor MRI/README.md
+backend/brain-tumor-dataset-segmentation-and-classification
 
 # OS files
 .DS_Store
@@ -39,3 +39,7 @@ Thumbs.db
 
 # Others
 *.bak
+
+results/
+
+temp

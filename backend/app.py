@@ -1,64 +1,85 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image as keras_image
-from datetime import datetime
-
-import numpy as np
 import os
 import shutil
+from datetime import datetime
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# Import from our custom modules
+from config import TEMP_DIR, STANDARD_MODEL_PATH, TRANSFER_MODEL_PATH, TUMOR_PRESENCE_THRESHOLD
+from model_loader import load_all_models
+from utils import preprocess_image, predict_mask, check_for_tumor, encode_image_to_base64
 
-model = load_model('./models/brain_tumor_detector_model.h5')
+# --- Initialization ---
+app = FastAPI(title="Brain Tumor Segmentation API")
 
+# Load models at startup for efficiency
+models = load_all_models(STANDARD_MODEL_PATH, TRANSFER_MODEL_PATH)
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+# Configure CORS (Cross-Origin Resource Sharing) to allow your frontend to communicate with this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allows all origins (for development)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
 )
 
+# --- API Endpoints ---
 @app.get("/")
 def read_root():
-    return {"message": "API is up and running"}
+    """A simple endpoint to confirm that the API is running."""
+    return {"message": "Brain Tumor Segmentation API is up and running."}
 
-@app.post("/predict-tumor")
-async def predict_tumor(image: UploadFile = File(...)):
+@app.post("/predict")
+async def predict_segmentation(file: UploadFile = File(...)):
+    if not models:
+        raise HTTPException(status_code=500, detail="Models are not loaded properly. Check server logs.")
+
+    # Define a temporary path to save the uploaded file
+    temp_file_path = os.path.join(TEMP_DIR, file.filename)
+    
     try:
-        temp_file_location = f"./temp/{image.filename}"
-        os.makedirs("./temp", exist_ok=True)
+        # Save the uploaded file to the temporary location
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-        with open(temp_file_location, "wb") as temp_file:
-            shutil.copyfileobj(image.file, temp_file)
+        # --- Main Processing Pipeline (Modules 1, 3, 4, 6) ---
+        # 1. Preprocess the image
+        image_batch = preprocess_image(temp_file_path)
+        
+        # 3. Predict masks with both models
+        mask_std = predict_mask(models['standard'], image_batch)
+        mask_tfr = predict_mask(models['transfer'], image_batch)
+        
+        # 4. Check for tumor presence using the more reliable transfer learning model
+        tumor_present = check_for_tumor(mask_tfr, TUMOR_PRESENCE_THRESHOLD)
 
-        img = keras_image.load_img(temp_file_location, target_size=(150, 150))
-        x = keras_image.img_to_array(img)
-        x = np.expand_dims(x, axis=0) / 255.0
-
-        prediction = model.predict(x)[0]
-        class_labels = ['glioma', 'meningioma', 'notumor', 'pituitary']
-        predicted_class = np.argmax(prediction)
-        confidence = round(prediction[predicted_class] * 100, 1)
-        label = class_labels[predicted_class]
-
-        if label == 'notumor':
-            label = "No tumor detected"
-        else:
-            label = f"Tumor type detected: {label}"
-
-        print("Predicted class label:", label)
-        print("Confidence score:", confidence)
-        print("Timestamp:", datetime.now().isoformat())
-
-        os.remove(temp_file_location)
-
+        # 6. Formulate the response
+        if not tumor_present:
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "tumor_present": False,
+                "message": "No significant tumor region detected."
+            }
+        
+        # If a tumor is present, encode the masks to base64 strings
+        mask_std_b64 = encode_image_to_base64(mask_std)
+        mask_tfr_b64 = encode_image_to_base64(mask_tfr)
+        
         return {
-            "prediction": label,
-            "confidence": float(confidence),
+            "timestamp": datetime.now().isoformat(),
+            "tumor_present": True,
+            "masks": {
+                "standard_unet": mask_std_b64,
+                "transfer_unet": mask_tfr_b64
+            }
         }
 
     except Exception as e:
-        print("Error:", str(e))
-        return {"error": str(e)}
+        # Catch any unexpected errors and return a helpful message
+        raise HTTPException(status_code=500, detail=f"An error occurred during processing: {str(e)}")
+    finally:
+        # Ensure the temporary file is always cleaned up
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
