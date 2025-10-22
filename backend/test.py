@@ -104,3 +104,26 @@ if __name__ == "__main__":
 
         plt.tight_layout()
         plt.show()
+        
+        # --- 8. Calculate and print Dice and IoU between the two predicted masks ---
+        bin_std = (pred_std_mask.squeeze() > 0.5).astype(np.uint8)
+        bin_tfr = (pred_tfr_mask.squeeze() > 0.5).astype(np.uint8)
+
+        def numpy_dice(a, b, smooth=1e-6):
+            a_f = a.flatten()
+            b_f = b.flatten()
+            intersection = np.sum(a_f * b_f)
+            return (2.0 * intersection + smooth) / (np.sum(a_f) + np.sum(b_f) + smooth)
+
+        def numpy_iou(a, b, smooth=1e-6):
+            a_f = a.flatten()
+            b_f = b.flatten()
+            intersection = np.sum(a_f * b_f)
+            union = np.sum(a_f) + np.sum(b_f) - intersection
+            return (intersection + smooth) / (union + smooth)
+
+        dice_val = numpy_dice(bin_std, bin_tfr)
+        iou_val = numpy_iou(bin_std, bin_tfr)
+
+        print(f"Dice coefficient between Standard and Transfer predictions: {dice_val * 100:.2f}%")
+        print(f"IoU between Standard and Transfer predictions: {iou_val * 100:.2f}%")
