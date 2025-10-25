@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brain Tumor Detection</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Brain Tumor Detection System</h1>
+    <p>AI-Powered MRI Image Analysis using Enhanced U-Net</p>
+  </header>
+
+  <main class="container">
+    <section class="left-section">
+      <div class="upload-box">
+        <h2>Upload MRI Image</h2>
+        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+          <input type="file" name="file" id="fileInput" accept="image/*" required />
+          <button type="submit" id="analyzeButton">Analyze Image</button>
+        </form>
+      </div>
+
+      <div class="result-box" id="resultBox">
+        <h2>Detection Result</h2>
+        <div class="image-display" id="imageDisplay">
+          <p>Upload an MRI image and click "Analyze Image" to see the prediction.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="right-section">
+      <h2>Brain Tumor Awareness</h2>
+      <div class="awareness-box" id="awarenessBox">
+        <p></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Brain Tumor Detection Project | Developed by [Your Name]</p>
+  </footer>
+
+  <script>
+    // --- Configuration ---
+    const API_ENDPOINT = "http://127.0.0.1:8000/predict"; // **CRITICAL: Update this if your backend port changes**
+
+    // --- Awareness Fact Rotation ---
+    const facts = [
+      "Early diagnosis of brain tumors can significantly improve treatment outcomes.",
+      "Regular MRI scans are the most effective way to detect brain abnormalities early.",
+      "Symptoms like persistent headaches, seizures, or vision changes should not be ignored.",
+      "Maintaining a healthy lifestyle and managing stress can reduce neurological risks.",
+      "Deep learning techniques like U-Net greatly enhance the precision of tumor segmentation."
+    ];
+
+    let index = 0;
+    const awarenessBox = document.getElementById('awarenessBox').querySelector('p');
+    function updateFact() {
+      awarenessBox.textContent = facts[index];
+      index = (index + 1) % facts.length;
+    }
+    updateFact();
+    setInterval(updateFact, 30000); // change every 30 seconds
+
+    // --- Main Application Logic ---
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const imageDisplay = document.getElementById('imageDisplay');
+    const analyzeButton = document.getElementById('analyzeButton');
+    
+    // Function to display the initial preview of the uploaded image
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          imageDisplay.innerHTML = `
+            <div class="image-pair">
+              <div>
+                <h4>Uploaded MRI</h4>
+                <img id="uploadedImage" src="${event.target.result}" alt="Uploaded MRI" />
+              </div>
+              <div>
+                <h4>Predicted Output (Transfer U-Net)</h4>
+                <img id="resultImage" src="" alt="Prediction Result" />
+                <p id="resultText">Click "Analyze Image" to start detection...</p>
+              </div>
+            </div>
+          `;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Function to handle the form submission and API call
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select an MRI image to analyze.");
+        return;
+      }
+
+      // 1. Prepare for submission
+      analyzeButton.disabled = true;
+      analyzeButton.textContent = "Analyzing... Please wait.";
+      const resultTextElement = document.getElementById('resultText');
+      const resultImageElement = document.getElementById('resultImage');
+      const uploadedImageElement = document.getElementById('uploadedImage');
+      
+      resultTextElement.textContent = "Processing image with AI model...";
+      resultTextElement.className = "";
+      
+      // Reset image border
+      if (uploadedImageElement) uploadedImageElement.className = '';
+      if (resultImageElement) resultImageElement.className = '';
+      if (resultImageElement) resultImageElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Placeholder clear image
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        // 2. Send request to the FastAPI backend
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Handle HTTP error statuses (e.g., 500 from FastAPI HTTPException)
+          throw new Error(data.detail || `HTTP error! Status: ${response.status}`);
+        }
+
+        // 3. Process the response data
+        if (data.tumor_present) {
+          // Tumor detected
+          const base64Mask = data.masks.transfer_unet; // Use the more reliable transfer_unet mask
+          
+          resultImageElement.src = `data:image/png;base64,${base64Mask}`;
+          resultTextElement.textContent = "⚠️ Tumor Detected! Segmentation map is shown.";
+          resultTextElement.className = "result-danger";
+          uploadedImageElement.classList.add('tumor-detected');
+          resultImageElement.classList.add('tumor-detected');
+
+        } else {
+          // No tumor detected
+          resultImageElement.src = ''; // No mask to show
+          resultImageElement.alt = 'No tumor detected';
+          resultTextElement.textContent = "✅ No significant tumor detected.";
+          resultTextElement.className = "result-success";
+          uploadedImageElement.classList.add('no-tumor');
+          resultImageElement.classList.add('no-tumor');
+        }
+
+      } catch (error) {
+        console.error('Prediction Error:', error);
+        resultTextElement.textContent = `Error: ${error.message}. Please check console and API status.`;
+        resultTextElement.className = "result-danger";
+        if (resultImageElement) resultImageElement.src = ''; 
+        alert(`Analysis Failed: ${error.message}`);
+      } finally {
+        // 4. Cleanup
+        analyzeButton.disabled = false;
+        analyzeButton.textContent = "Analyze Image";
+      }
+    });
+  </script>
+</body>
+</html>
